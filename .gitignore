@@ -295,3 +295,6 @@ modules.xml
 # pytype static type analyzer
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm+all,python,django
+
+# User Added
+secrets.json
