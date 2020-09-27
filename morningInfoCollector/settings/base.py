@@ -17,7 +17,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 def get_secret(setting):
@@ -51,7 +51,6 @@ INSTALLED_APPS = [
     # User Added
     "weather",
     "stock",
-    "core",
 ]
 
 MIDDLEWARE = [
