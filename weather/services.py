@@ -1,52 +1,23 @@
 import datetime
 import typing
-from dataclasses import asdict, dataclass
-from urllib.parse import urlencode
 
 from django.conf import settings
 from django.http import QueryDict
 from django.utils import timezone
-from morningInfoCollector.utils import to_camel_case
-from weather.constants import API_ROOT
 
 __all__ = ["default_weather_service"]
+
+from django.utils.http import urlencode
+
+from weather.constants import API_ROOT
+from weather.dataclasses import WeatherRequestDTO
 
 DATE_FORMAT = "%Y%M%d"
 
 
-@dataclass
-class WeatherRequestQuery:
-    base_date: str = None
-    base_time: str = None
-    nx: int = None
-    ny: int = None
-    num_of_rows: typing.Optional[int] = None
-    page_no: typing.Optional[int] = None
-    data_type: typing.Union["JSON", "XML"] = "JSON"
-
-    def serialize(self) -> dict:
-        dictionary = asdict(self)
-        date, time = dictionary.pop("base_date", None), dictionary.pop(
-            "base_time", None
-        )
-        dictionary = {to_camel_case(k): v for k, v in dictionary.items() if v}
-
-        if date and time:
-            # base_date, base_time만 snake_case이다
-            dictionary["base_date"] = date
-            dictionary["base_time"] = time
-
-        return dictionary
-
-    def get_api(self) -> str:
-        query_string = urlencode(self.serialize())
-        service_key: str = settings.WEATHER_API_KEY
-        return f"{API_ROOT}?serviceKey={service_key}&{query_string}"
-
-
 class WeatherAPIBuilder:
     def __init__(self):
-        self.request_query = WeatherRequestQuery()
+        self.request_query = WeatherRequestDTO()
 
     def set_pagination(self, page_size, page_no):
         self.request_query.num_of_rows = page_size
@@ -69,7 +40,9 @@ class WeatherAPIBuilder:
         return self
 
     def build(self) -> str:
-        return self.request_query.get_api()
+        query_string = urlencode(self.request_query.serialize())
+        service_key: str = settings.WEATHER_API_KEY
+        return f"{API_ROOT}?serviceKey={service_key}&{query_string}"
 
 
 class WeatherService:
