@@ -1,26 +1,86 @@
 from json.decoder import JSONDecodeError
 
 import requests
-from rest_framework.exceptions import ParseError
+from requests import HTTPError, Response
+
+
+class ApplicationError(Exception):
+    pass
+
+
+class DBError(Exception):
+    pass
+
+
+class NoDataError(Exception):
+    pass
+
+
+class APIHttpError(Exception):
+    pass
+
+
+class TimeOutError(Exception):
+    pass
+
+
+class NoMandatoryParameterError(Exception):
+    pass
+
+
+class ServiceKeyNotRegisteredError(Exception):
+    pass
+
+
+class UnknownError(Exception):
+    pass
 
 
 class WeatherAPIRequest:
     def get(self, url, **kwargs):
-        response = requests.get(url, **kwargs)
+        response: Response = requests.get(url, **kwargs)
+
+        if kwargs.get("raw", False):
+            return response
+
+        json = self.process_response(response)
+        self.raise_error(json)
+
+        return json
+
+    def process_response(self, response: Response):
+        response.raise_for_status()
+
         try:
-            res = response.json()
+            res_json = response.json()
         except JSONDecodeError:
-            raise ParseError('JSON 파싱에 실패했습니다. 요청 파라미터가 잘못되었을 수 있습니다.')
+            raise HTTPError(
+                "JSON 파싱에 실패했습니다. 요청 파라미터가 잘못되었을 수 있습니다.", response=response
+            )
+        return res_json
 
-    def process_json(self, json):
-        res = json.get('response
-        header = res.get('header')
+    def raise_error(self, json):
+        header = json.get("header")
+        if not header:
+            raise UnknownError("기상청 API Response에 header키가 없습니다.")
+        result_code = header.get("resultCode")
 
-
-
-
-
-
-
-
-
+        if result_code == "00":
+            # 정상
+            return
+        elif result_code == "01":
+            raise ApplicationError
+        elif result_code == "02":
+            raise DBError
+        elif result_code == "03":
+            raise NoDataError
+        elif result_code == "04":
+            raise APIHttpError
+        elif result_code == "05":
+            raise TimeOutError
+        elif result_code == "10":
+            raise NoMandatoryParameterError
+        elif result_code == "ServiceKeyNotRegisteredError":
+            raise ServiceKeyNotRegisteredError
+        else:
+            raise UnknownError(f"에러코드: {result_code}")
