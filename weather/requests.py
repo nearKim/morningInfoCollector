@@ -1,38 +1,45 @@
 from json.decoder import JSONDecodeError
 
 import requests
-from requests import HTTPError, Response
+from morningInfoCollector.utils import to_snake_dict
+from requests import Response
 
 
-class ApplicationError(Exception):
+class BaseError(Exception):
+    def capture(self):
+        # TODO
+        pass
+
+
+class ApplicationError(BaseError):
     pass
 
 
-class DBError(Exception):
+class DBError(BaseError):
     pass
 
 
-class NoDataError(Exception):
+class NoDataError(BaseError):
     pass
 
 
-class APIHttpError(Exception):
+class APIHttpError(BaseError):
     pass
 
 
-class TimeOutError(Exception):
+class TimeOutError(BaseError):
     pass
 
 
-class NoMandatoryParameterError(Exception):
+class NoMandatoryParameterError(BaseError):
     pass
 
 
-class ServiceKeyNotRegisteredError(Exception):
+class ServiceKeyNotRegisteredError(BaseError):
     pass
 
 
-class UnknownError(Exception):
+class UnknownError(BaseError):
     pass
 
 
@@ -46,7 +53,7 @@ class WeatherAPIRequest:
         json = self.process_response(response)
         self.raise_error(json)
 
-        return json
+        return to_snake_dict(json["body"])
 
     def process_response(self, response: Response):
         response.raise_for_status()
@@ -54,7 +61,7 @@ class WeatherAPIRequest:
         try:
             res_json = response.json()
         except JSONDecodeError:
-            raise HTTPError(
+            raise UnknownError(
                 "JSON 파싱에 실패했습니다. 요청 파라미터가 잘못되었을 수 있습니다.", response=response
             )
         return res_json
@@ -84,3 +91,6 @@ class WeatherAPIRequest:
             raise ServiceKeyNotRegisteredError
         else:
             raise UnknownError(f"에러코드: {result_code}")
+
+
+weather_api_requests = WeatherAPIRequest()
