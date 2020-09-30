@@ -9,10 +9,10 @@ __all__ = ["default_weather_service"]
 
 from django.utils.http import urlencode
 
-from weather.constants import API_ROOT
 from weather.dataclasses import WeatherRequestDTO
 
 DATE_FORMAT = "%Y%M%d"
+API_ROOT = "http://apis.data.go.kr/1360000/VilageFcstInfoService/getVilageFcst"
 
 
 class WeatherAPIBuilder:

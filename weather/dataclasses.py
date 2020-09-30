@@ -26,14 +26,3 @@ class WeatherRequestDTO:
             dictionary["base_time"] = time
 
         return dictionary
-
-
-@dataclass
-class WeatherResponseDTO:
-    base_date: str
-    base_time: str
-    category: str
-    fcst_date: str
-    fcst_value: str
-    nx: int
-    ny: int
