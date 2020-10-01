@@ -13,6 +13,7 @@ from weather.dataclasses import (
     WeatherForecastDTO,
     WeatherRequestDTO,
 )
+from weather.models import SimpleForecastHistory
 
 __all__ = ["default_weather_service"]
 
@@ -35,7 +36,7 @@ class WeatherAPIBuilder:
         self.request_query.ny = y
         return self
 
-    def set_datetime(self, date: datetime.date, time: int = 5):
+    def set_datetime(self, date: datetime.date, time: int = 2):
         if time not in [2, 5, 8, 11, 14, 17, 20, 23]:
             raise ValueError("시간대는 2, 5, 8, 11, 14, 17, 20, 23 중 하나여야 합니다.")
 
@@ -105,19 +106,26 @@ class WeatherService:
             value = weather_item.get("fcst_value")
 
             if category == "TMN":
-                data["min_temperature"] = float(value)
+                data["min_temperature"] = float(value) if value else None
             elif category == "TMX":
-                data["max_temperature"] = float(value)
+                data["max_temperature"] = float(value) if value else None
             elif category == "POP":
-                value = PrecipitationProbability(forecast_time, value)
+                value = PrecipitationProbability(forecast_time, float(value))
                 data["probability_of_precipitation_list"].append(value)
             elif category == "PTY":
-                value = PrecipitationType(forecast_time, PtyCode[value])
+                value = PrecipitationType(forecast_time, PtyCode(int(value)))
                 data["precipitation_type_list"].append(value)
             elif category == "SKY":
-                value = SkyStatus(forecast_time, SkyStatusCode[value])
+                value = SkyStatus(forecast_time, SkyStatusCode(int(value)))
                 data["sky_status_list"].append(value)
+
         return WeatherForecastDTO(**data)
+
+    def create_simple_history(self, weather_forecast_dto: WeatherForecastDTO):
+        history = SimpleForecastHistory.objects.create(
+            **weather_forecast_dto.serialize()
+        )
+        return history
 
 
 default_weather_service = WeatherService()

@@ -59,7 +59,7 @@ class WeatherAPIRequest:
         response.raise_for_status()
 
         try:
-            res_json = response.json()
+            res_json = response.json().get("response")
         except JSONDecodeError:
             raise UnknownError("JSON 파싱에 실패했습니다. 요청 파라미터가 잘못되었을 수 있습니다.")
         return res_json

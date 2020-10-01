@@ -69,10 +69,17 @@ class SkyStatus:
 @dataclass
 class WeatherForecastDTO:
     forecast_date: datetime.date
-    min_temperature: float
-    max_temperature: float
     x: int
     y: int
     probability_of_precipitation_list: typing.List[PrecipitationProbability]
     precipitation_type_list: typing.List[PrecipitationType]
     sky_status_list: typing.List[SkyStatus]
+    min_temperature: typing.Optional[float] = None
+    max_temperature: typing.Optional[float] = None
+
+    def serialize(self) -> dict:
+        dictionary = asdict(self)
+        dictionary.pop("probability_of_precipitation_list")
+        dictionary.pop("precipitation_type_list")
+        dictionary.pop("sky_status_list")
+        return dictionary

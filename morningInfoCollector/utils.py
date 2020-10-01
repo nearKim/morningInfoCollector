@@ -22,6 +22,8 @@ def to_snake_dict(dictionary):
 
         if isinstance(v, dict):
             new_dict[snake_key] = to_snake_dict(v)
+        elif isinstance(v, list):
+            new_dict[snake_key] = [to_snake_dict(k) for k in v]
         else:
             new_dict[snake_key] = v
     return new_dict
