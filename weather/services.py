@@ -2,26 +2,23 @@ import datetime
 import typing
 
 from django.conf import settings
-from django.http import QueryDict
 from django.utils import timezone
 from django.utils.http import urlencode
-from weather.dataclasses import WeatherRequestDTO
-from weather.models import WeatherForecastHistory
+from weather.dataclasses import (
+    PrecipitationProbability,
+    PrecipitationType,
+    PtyCode,
+    SkyStatus,
+    SkyStatusCode,
+    WeatherForecastDTO,
+    WeatherRequestDTO,
+)
 
 __all__ = ["default_weather_service"]
 
 
 DATE_FORMAT = "%Y%M%d"
 API_ROOT = "http://apis.data.go.kr/1360000/VilageFcstInfoService/getVilageFcst"
-
-
-def build_datetime(date_string: str, time_string: str):
-    """ Weather API의 파라미터를 Python datetime 객체로 변환합니다 """
-    clean_time = time_string.strip("00")
-    result: datetime.datetime = datetime.datetime.strptime(
-        f"{date_string} {clean_time}", "%Y%m%d %H"
-    )
-    return result
 
 
 class WeatherAPIBuilder:
@@ -55,7 +52,7 @@ class WeatherAPIBuilder:
 
 
 class WeatherService:
-    def get_full_weather_api_url(self, query_params: QueryDict) -> str:
+    def get_full_weather_api_url(self, **query_params) -> str:
         pagination: typing.Tuple[typing.Optional[int], typing.Optional[int]] = (
             query_params.get("page_size"),
             query_params.get("page_no"),
@@ -82,32 +79,45 @@ class WeatherService:
         )
         return api_url
 
-    def create_weather_forecast_history(
-        self, weather_api_responses: list
-    ) -> WeatherForecastHistory:
-        first_res = weather_api_responses[0]
-        base_datetime = build_datetime(
-            first_res.get("base_date"), first_res.get("base_time")
-        )
-        forecast_datetime = build_datetime(
-            first_res.get("fcst_date"), first_res.get("fcst_time")
-        )
+    def convert_response_to_dto(
+        self,
+        weather_api_responses: list,
+        forecast_target_date: datetime.date,
+        *,
+        x: int,
+        y: int,
+    ):
+        forecast_target_date_string = forecast_target_date.strftime("%Y%m%d")
         data = {
-            "base_datetime": base_datetime,
-            "forecast_datetime": forecast_datetime,
-            "x": first_res.get("nx"),
-            "y": first_res.get("ny"),
+            "forecast_date": forecast_target_date,
+            "x": x,
+            "y": y,
+            "probability_of_precipitation_list": [],
+            "precipitation_type_list": [],
+            "sky_status_list": [],
         }
 
-        for response in weather_api_responses:
-            weather_code = response.get("category")
-            value = response.get("fcst_value")
-            model_field_name = (
-                WeatherForecastHistory.WEATHER_CODE_TO_MODEL_FIELD_MAP.get(weather_code)
-            )
-            data[model_field_name] = value
+        for weather_item in weather_api_responses:
+            if weather_item.get("fcst_date") != forecast_target_date_string:
+                continue
+            category = weather_item.get("category")
+            forecast_time = datetime.time(int(weather_item.get("fcst_time").strip("0")))
+            value = weather_item.get("fcst_value")
 
-        return WeatherForecastHistory.objects.create(**data)
+            if category == "TMN":
+                data["min_temperature"] = float(value)
+            elif category == "TMX":
+                data["max_temperature"] = float(value)
+            elif category == "POP":
+                value = PrecipitationProbability(forecast_time, value)
+                data["probability_of_precipitation_list"].append(value)
+            elif category == "PTY":
+                value = PrecipitationType(forecast_time, PtyCode[value])
+                data["precipitation_type_list"].append(value)
+            elif category == "SKY":
+                value = SkyStatus(forecast_time, SkyStatusCode[value])
+                data["sky_status_list"].append(value)
+        return WeatherForecastDTO(**data)
 
 
 default_weather_service = WeatherService()

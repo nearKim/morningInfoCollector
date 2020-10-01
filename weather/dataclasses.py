@@ -1,6 +1,26 @@
+import datetime
 import typing
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
+from enum import Enum
+
 from morningInfoCollector.utils import to_camel_case
+
+
+class SkyStatusCode(Enum):
+    맑음 = 1
+    구름많음 = 3
+    흐림 = 4
+
+
+class PtyCode(Enum):
+    없음 = 0
+    비 = 1
+    진눈개비 = 2
+    눈 = 3
+    소나기 = 4
+    빗방울 = 5
+    빗방울_눈날림 = 6
+    눈날림 = 7
 
 
 @dataclass
@@ -26,3 +46,33 @@ class WeatherRequestDTO:
             dictionary["base_time"] = time
 
         return dictionary
+
+
+@dataclass
+class PrecipitationProbability:
+    forecast_time: datetime.time
+    value: float
+
+
+@dataclass
+class PrecipitationType:
+    forecast_time: datetime.time
+    value: PtyCode
+
+
+@dataclass
+class SkyStatus:
+    forecast_time: datetime.time
+    value: SkyStatusCode
+
+
+@dataclass
+class WeatherForecastDTO:
+    forecast_date: datetime.date
+    min_temperature: float
+    max_temperature: float
+    x: int
+    y: int
+    probability_of_precipitation_list: typing.List[PrecipitationProbability]
+    precipitation_type_list: typing.List[PrecipitationType]
+    sky_status_list: typing.List[SkyStatus]
