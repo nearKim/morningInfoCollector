@@ -4,15 +4,24 @@ import typing
 from django.conf import settings
 from django.http import QueryDict
 from django.utils import timezone
+from django.utils.http import urlencode
+from weather.dataclasses import WeatherRequestDTO
+from weather.models import WeatherForecastHistory
 
 __all__ = ["default_weather_service"]
 
-from django.utils.http import urlencode
-
-from weather.dataclasses import WeatherRequestDTO
 
 DATE_FORMAT = "%Y%M%d"
 API_ROOT = "http://apis.data.go.kr/1360000/VilageFcstInfoService/getVilageFcst"
+
+
+def build_datetime(date_string: str, time_string: str):
+    """ Weather API의 파라미터를 Python datetime 객체로 변환합니다 """
+    clean_time = time_string.strip("00")
+    result: datetime.datetime = datetime.datetime.strptime(
+        f"{date_string} {clean_time}", "%Y%m%d %H"
+    )
+    return result
 
 
 class WeatherAPIBuilder:
@@ -72,6 +81,33 @@ class WeatherService:
             .build()
         )
         return api_url
+
+    def create_weather_forecast_history(
+        self, weather_api_responses: list
+    ) -> WeatherForecastHistory:
+        first_res = weather_api_responses[0]
+        base_datetime = build_datetime(
+            first_res.get("base_date"), first_res.get("base_time")
+        )
+        forecast_datetime = build_datetime(
+            first_res.get("fcst_date"), first_res.get("fcst_time")
+        )
+        data = {
+            "base_datetime": base_datetime,
+            "forecast_datetime": forecast_datetime,
+            "x": first_res.get("nx"),
+            "y": first_res.get("ny"),
+        }
+
+        for response in weather_api_responses:
+            weather_code = response.get("category")
+            value = response.get("fcst_value")
+            model_field_name = (
+                WeatherForecastHistory.WEATHER_CODE_TO_MODEL_FIELD_MAP.get(weather_code)
+            )
+            data[model_field_name] = value
+
+        return WeatherForecastHistory.objects.create(**data)
 
 
 default_weather_service = WeatherService()
