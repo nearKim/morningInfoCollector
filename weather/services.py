@@ -17,6 +17,7 @@ from weather.models import SimpleForecastHistory
 
 __all__ = ["default_weather_service"]
 
+from weather.requests import weather_api_requests
 
 DATE_FORMAT = "%Y%M%d"
 API_ROOT = "http://apis.data.go.kr/1360000/VilageFcstInfoService/getVilageFcst"
@@ -79,6 +80,20 @@ class WeatherService:
             .build()
         )
         return api_url
+
+    def call_weather_api(self, query_params, page_size=500) -> typing.List[dict]:
+        api_url = default_weather_service.get_full_weather_api_url(
+            page_size, page_no=1, **query_params
+        )
+        response = weather_api_requests.get(api_url)
+        total_count = response.get("total_count")
+
+        if total_count > page_size:
+            # 500개보다 결과가 많으면 한번 더 호출한다
+            return self.call_weather_api(query_params, total_count)
+
+        weather_api_items: typing.List[dict] = response.get("items").get("item")
+        return weather_api_items
 
     def convert_response_to_dto(
         self,
