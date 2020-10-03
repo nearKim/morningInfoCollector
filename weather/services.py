@@ -4,6 +4,7 @@ import typing
 from django.conf import settings
 from django.utils import timezone
 from django.utils.http import urlencode
+
 from weather.dataclasses import (
     PrecipitationProbability,
     PrecipitationType,
@@ -19,7 +20,7 @@ __all__ = ["default_weather_service"]
 
 from weather.requests import weather_api_requests
 
-DATE_FORMAT = "%Y%M%d"
+DATE_FORMAT = "%Y%m%d"
 API_ROOT = "http://apis.data.go.kr/1360000/VilageFcstInfoService/getVilageFcst"
 
 
@@ -43,8 +44,8 @@ class WeatherAPIBuilder:
 
         if not date:
             date = timezone.now().date()
-        self.request_query.date = date.strftime(DATE_FORMAT)
-        self.request_query.time = f"0{time}00" if time < 10 else f"{time}00"
+        self.request_query.base_date = date.strftime(DATE_FORMAT)
+        self.request_query.base_time = f"0{time}00" if time < 10 else f"{time}00"
         return self
 
     def build(self) -> str:
@@ -83,7 +84,7 @@ class WeatherService:
 
     def call_weather_api(self, query_params, page_size=500) -> typing.List[dict]:
         api_url = default_weather_service.get_full_weather_api_url(
-            page_size, page_no=1, **query_params
+            page_size=page_size, page_no=1, **query_params
         )
         response = weather_api_requests.get(api_url)
         total_count = response.get("total_count")

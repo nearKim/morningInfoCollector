@@ -30,6 +30,8 @@ class APIHttpError(BaseError):
 class TimeOutError(BaseError):
     pass
 
+class InvalidRequestParameterError(BaseError):
+    pass
 
 class NoMandatoryParameterError(BaseError):
     pass
@@ -84,6 +86,8 @@ class WeatherAPIRequest:
         elif result_code == "05":
             raise TimeOutError
         elif result_code == "10":
+            raise InvalidRequestParameterError
+        elif result_code == "11":
             raise NoMandatoryParameterError
         elif result_code == "ServiceKeyNotRegisteredError":
             raise ServiceKeyNotRegisteredError
