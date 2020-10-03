@@ -2,6 +2,7 @@ from django.urls import include, path
 
 from .views import VillageWeatherAPIView, VillageWeatherInformationSendAPIView
 
+app_name = "weather"
 urlpatterns = [
     path(
         "api/",

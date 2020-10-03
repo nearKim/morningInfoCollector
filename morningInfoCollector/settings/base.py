@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # User Added
+    "core",
     "weather",
     "stock",
 ]
@@ -92,6 +93,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = "core.SimpleUser"
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/3.1/topics/i18n/
@@ -114,3 +117,6 @@ STATIC_URL = "/static/"
 
 # Weather API
 WEATHER_API_KEY = get_secret("WEATHER_API_KEY")
+
+# KAKAO
+KAKAO_APP_ID = get_secret("KAKAO_APP_ID")
