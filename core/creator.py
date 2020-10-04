@@ -3,6 +3,10 @@ import datetime
 
 import typing
 
+from django.utils import timezone
+
+from stock.constants import StockTicker
+from stock.services import default_stock_service
 from weather.dataclasses import WeatherForecastDTO, SkyStatusCode, PtyCode
 from weather.models import SimpleForecastHistory
 
@@ -53,7 +57,7 @@ class WeatherTextCreator(AbstractTextCreator):
         text = (
             f"[오늘의 날씨]\n"
             f"{self.dto.forecast_date.strftime('%m월 %d일')}\n"
-            f"========"
+            f"==============\n"
             f"최소 기온: {self.dto.min_temperature}℃ {yesterday_min_temp_text}\n"
             f"최고 기온: {self.dto.max_temperature}℃ {yesterday_max_temp_text}"
         )
@@ -123,3 +127,88 @@ class WeatherTextCreator(AbstractTextCreator):
             self.create_pty_text(),
         ]
         return [r.strip() for r in result]
+
+
+class StockTextCreator(AbstractTextCreator):
+    def __build_text(self, company, data: typing.List[float]):
+        price_text = "\t".join([format(d, ".3f") for d in data])
+        return f"{company}\t{price_text}\n"
+
+    def _create_company_list_text(
+        self,
+        company_list: typing.List[str],
+        title: str,
+        target_date: datetime.date = None,
+    ):
+        if not target_date:
+            target_date = timezone.now().date() - datetime.timedelta(days=1)
+        date_string = target_date.strftime("%Y-%m-%d")
+        data = default_stock_service.get_stock_data(company_list, period="1d")
+
+        text = f"[{title}]\n"
+
+        try:
+            series = data.loc[date_string].iloc[0]
+        except KeyError:
+            return f"{date_string}일의 주가 정보를 제공하지 않습니다."
+
+        text += f"Ticker\t종가\t시작가\t고가\t저가\n"
+
+        if len(company_list) == 1:
+            company = company_list[0]
+            data = [
+                series["Close"],
+                series["Open"],
+                series["High"],
+                series["Low"],
+            ]
+            text += self.__build_text(company, data)
+        else:
+            for company in company_list:
+                data = [
+                    series[company]["Close"],
+                    series[company]["Open"],
+                    series[company]["High"],
+                    series[company]["Low"],
+                ]
+                text += self.__build_text(company, data)
+        return text
+
+    def create_faang_text(self):
+        faang = [
+            StockTicker.FAANG.FACEBOOK,
+            StockTicker.FAANG.APPLE,
+            StockTicker.FAANG.AMAZON,
+            StockTicker.FAANG.NETFLIX,
+            StockTicker.FAANG.GOOGLE,
+        ]
+        return self._create_company_list_text(faang, "FAANG")
+
+    def create_panda_text(self):
+        panda = [
+            StockTicker.PANDA.PAYPAL,
+            StockTicker.PANDA.ALPHABET,
+            StockTicker.PANDA.NVIDIA,
+            StockTicker.PANDA.DISNEY,
+            StockTicker.PANDA.AMAZON,
+        ]
+        return self._create_company_list_text(panda, "PANDA")
+
+    def create_cpu_text(self):
+        cpu = [
+            StockTicker.CPU.AMD,
+            StockTicker.CPU.INTEL,
+        ]
+        return self._create_company_list_text(cpu, "CPU")
+
+    def create_e_car_text(self):
+        return self._create_company_list_text([StockTicker.E_CAR.TESLA], "E CAR")
+
+    def create(self) -> typing.List[str]:
+        result = [
+            self.create_faang_text(),
+            self.create_panda_text(),
+            self.create_cpu_text(),
+            self.create_e_car_text(),
+        ]
+        return result
