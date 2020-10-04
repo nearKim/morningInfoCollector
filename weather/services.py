@@ -5,6 +5,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.utils.http import urlencode
 
+from weather.constants import Coordinate, Coordinates
 from weather.dataclasses import (
     PrecipitationProbability,
     PrecipitationType,
@@ -138,10 +139,23 @@ class WeatherService:
         return WeatherForecastDTO(**data)
 
     def create_simple_history(self, weather_forecast_dto: WeatherForecastDTO):
-        history = SimpleForecastHistory.objects.create(
+        history, _ = SimpleForecastHistory.objects.update_or_create(
             **weather_forecast_dto.serialize()
         )
         return history
+
+    def get_weather_forecast_dto(
+        self, coordinate: Coordinate = None, date: datetime.date = None, time: int = 2
+    ) -> WeatherForecastDTO:
+        if not date:
+            date = timezone.now().date()
+        if not coordinate:
+            coordinate = Coordinates.낙성대동
+        x, y = coordinate.x, coordinate.y
+        data = {"x": x, "y": y, "date": date.strftime(DATE_FORMAT), "time": time}
+        weather_api_items = self.call_weather_api(data)
+        dto = self.convert_response_to_dto(weather_api_items, date, x=x, y=y)
+        return dto
 
 
 default_weather_service = WeatherService()
